@@ -1,0 +1,13 @@
+{
+  "name": "qa-automation-pipeline",
+  "owner": {
+    "name": "JCG097"
+  },
+  "plugins": [
+    {
+      "name": "qa-automation-pipeline",
+      "source": ".",
+      "description": "Pipeline de QA automation: analiza una user story/AC, genera casos de prueba, decide qué automatizar, escribe y valida tests de Playwright, y reporta resultados."
+    }
+  ]
+}
