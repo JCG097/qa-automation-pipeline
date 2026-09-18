@@ -137,11 +137,19 @@ Si `apps/<app-slug>/` ya existe (historia previa sobre la misma app), reutilizar
 
 ## Inspeccionar la app real antes de escribir selectores
 
-**No inventar selectores.** Antes de codificar cada escenario, confirmar la estructura real de la página:
+**No inventar selectores.** Antes de codificar cada escenario, confirmar la estructura real de la página.
 
-- Si la página es server-rendered (HTML estático), usar `curl` (guardando la salida en el scratchpad, no en `/tmp`) o el tool `Grep`/`Read` sobre el HTML para confirmar ids/clases/atributos reales.
-- Si la página es una SPA (React/Vue/etc. — se nota porque el HTML crudo trae solo un `<div id="root">` vacío y un bundle JS), `curl` no sirve. Escribir un script Node desechable en el scratchpad que use `require('@playwright/test').chromium`, navegue con un browser real, ejecute las acciones del flujo, y vuelque `outerHTML`/atributos de los elementos relevantes a un archivo. Ejecutarlo con `node` desde la raíz del proyecto (para que resuelva `@playwright/test` de `node_modules`). Si una acción dispara ruteo cliente-side (URL cambia sin recarga real), no confiar en `waitForLoadState('networkidle')` para sincronizar — esperar explícitamente el selector o la URL resultante (`page.waitForURL(...)`, `locator.waitFor()`).
-- Borrar los scripts de sondeo temporales al terminar; no deben quedar en el repo.
+**Dónde guardar lo temporal — esto es estricto, no una sugerencia:**
+- **Nunca** crear archivos ni carpetas de sondeo dentro del repositorio del proyecto (nada de `.scratch/`, `scratch/`, `tmp/`, `probe-*.js`/`.txt` sueltos en la raíz o en `apps/`, etc.), sin importar el nombre que se les ocurra ponerles.
+- Si el entorno expone un directorio de scratchpad propio (fuera del repo, ej. una ruta de temp de la sesión), usar ese.
+- Si no hay uno expuesto, usar el directorio temporal del sistema operativo — nunca el working directory del proyecto: en Node, `require('os').tmpdir()`; en shell, `mktemp -d` (Unix) o `%TEMP%` (Windows).
+- Borrar cada archivo de sondeo **inmediatamente después de leer lo que necesitabas de él** — no dejarlo "para el final". Si se generan varios (uno por escenario, por ejemplo), se borra cada uno apenas se usó, no se acumulan.
+
+**Cómo sondear:**
+- Si la página es server-rendered (HTML estático), usar `curl` (con la salida en el directorio temporal de arriba) o el tool `Grep`/`Read` sobre el HTML para confirmar ids/clases/atributos reales.
+- Si la página es una SPA (React/Vue/etc. — se nota porque el HTML crudo trae solo un `<div id="root">` vacío y un bundle JS), `curl` no sirve. Escribir un script Node desechable (en el directorio temporal de arriba, nunca en el repo) que use `require('@playwright/test').chromium`, navegue con un browser real, ejecute las acciones del flujo, y vuelque `outerHTML`/atributos de los elementos relevantes a un archivo. Como el script vive fuera del proyecto, `require('@playwright/test')` no lo resuelve solo desde ahí — `node`, al ejecutar un archivo, busca `node_modules` a partir de la ubicación del archivo, no del directorio de trabajo. Ejecutarlo así: `NODE_PATH="<ruta-absoluta-al-proyecto>/node_modules" node <script-temporal>` (verificado: sin `NODE_PATH` falla con `Cannot find module '@playwright/test'` aunque se invoque `node` desde la raíz del proyecto). Si una acción dispara ruteo cliente-side (URL cambia sin recarga real), no confiar en `waitForLoadState('networkidle')` para sincronizar — esperar explícitamente el selector o la URL resultante (`page.waitForURL(...)`, `locator.waitFor()`).
+
+**Verificación final antes de cerrar esta fase:** listar el árbol del repo (o `git status` si hay repo git) y confirmar que no quedó ningún archivo de sondeo, script `_probe*`/`probe-*`, ni carpeta `.scratch`/`scratch`/`tmp` dentro del proyecto. Si aparece alguno, borrarlo antes de escribir `pipeline/automation/<slug>.automation.md`.
 
 ## Convenciones de código a seguir
 
@@ -154,8 +162,9 @@ Si `apps/<app-slug>/` ya existe (historia previa sobre la misma app), reutilizar
 
 ## Al terminar
 
-1. Verificar que compila: `npx tsc --noEmit`.
-2. Escribir `pipeline/automation/<slug>.automation.md`:
+1. Confirmar que no quedó ningún archivo/carpeta de sondeo en el repo (ver "Verificación final" arriba). Borrar lo que haya quedado.
+2. Verificar que compila: `npx tsc --noEmit`.
+3. Escribir `pipeline/automation/<slug>.automation.md`:
    ```markdown
    ---
    slug: <slug>
@@ -179,6 +188,6 @@ Si `apps/<app-slug>/` ya existe (historia previa sobre la misma app), reutilizar
    ## Playwright project
    name: <app-slug>  (comando para correr solo esto: `npx playwright test --project=<app-slug>`)
    ```
-3. Resumen de 2-3 líneas al usuario: cuántos escenarios se automatizaron, en qué archivos, y si algo quedó bloqueado.
+4. Resumen de 2-3 líneas al usuario: cuántos escenarios se automatizaron, en qué archivos, y si algo quedó bloqueado.
 
 No corras la suite completa en esta fase más allá de una verificación rápida de sintaxis/compilación — la ejecución real y su validación es trabajo de `qa-validate`.
