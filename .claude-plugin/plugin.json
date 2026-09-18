@@ -1,0 +1,8 @@
+{
+  "name": "qa-automation-pipeline",
+  "description": "Pipeline de QA automation: analiza una user story/AC, genera casos de prueba, decide qué automatizar, escribe y valida tests de Playwright, y reporta resultados. Detecta historias tempranas o ambiguas y se detiene en el análisis en vez de forzar automatización.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Jorge Caceres"
+  }
+}
